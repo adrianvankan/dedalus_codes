@@ -1,3 +1,7 @@
+# This is a Python script for Dedalus (v3) to simulate forced, incompressible 2D turbulence on a sphere.
+# Author: Adrian van Kan
+# Date: 09 July 2023
+
 import numpy as np
 import dedalus.public as d3
 import logging
