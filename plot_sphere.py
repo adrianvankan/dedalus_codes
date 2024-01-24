@@ -63,7 +63,7 @@ def main(filename, start, count, output):
                 ax.axis('off')
             else:
                 surf.set_facecolors(fc.reshape(fc.size//4, 4))
-            
+            #SET THIS TO CORRECT VALUE 
             dt   = 0.25
             time = float(dt*index)
             fig.suptitle('Vorticity at $t$='+'%.2f' % time, fontsize=18)

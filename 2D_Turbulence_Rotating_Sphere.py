@@ -58,7 +58,7 @@ psi_f  = dist.Field(      name='psi_f',   bases=basis)
 psi    = dist.Field(      name='psi',   bases=basis)
 tau_p  = dist.Field(  name='tau_p')
 g      = dist.Field(      name='g',   bases=basis)
-h      = dist.Field(      name='g',   bases=basis)
+h      = dist.Field(      name='h',   bases=basis)
 
 # Coordinates
 phi, theta = dist.local_grids(basis)
@@ -153,6 +153,7 @@ try:
           print(len(psi_f['g']),len(phi_mat),len(theta_mat))
           d3.Average(psi_f).evaluate() #this gives the arrays the correct dimensions
           d3.Average(g).evaluate()
+          d3.Average(h).evaluate()
 
         for lm in lm_vec:
           l,m = lm 
