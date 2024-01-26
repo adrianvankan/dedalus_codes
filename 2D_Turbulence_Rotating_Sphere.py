@@ -144,7 +144,7 @@ try:
     logger.info('Starting main loop')
     while solver.proceed:
         
-        phi,theta = basis.local_grids((dealias,dealias));
+        phi,theta = basis.local_grids(dist,scales=(dealias,dealias));
         phi_mat   = phi   + 0*theta
         theta_mat = theta + 0*phi
         
