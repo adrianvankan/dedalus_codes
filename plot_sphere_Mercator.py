@@ -33,6 +33,8 @@ def main(filename, start, count, output):
         #print(phi)
         lat = (np.pi/2 - theta)*180/np.pi
         phi = (phi - np.pi)*180/np.pi
+        phi[0]  = -180
+        phi[-1] = 180
         #print(phi)
         phi_mat,lat_mat = np.meshgrid(phi,lat)
         for index in range(start, start+count):
@@ -41,9 +43,9 @@ def main(filename, start, count, output):
             ax = fig.add_subplot(projection=ccrs.Mercator())            
             data_slices = (index, slice(None), slice(None))
             data = dset[data_slices]
-            plt.contourf(phi_mat,lat_mat,np.transpose(data),transform=ccrs.PlateCarree(),cmap=cmap,levels=50)
+            contf = plt.contourf(phi_mat,lat_mat,np.transpose(data),transform=ccrs.PlateCarree(),cmap=cmap,levels=100)
             ax.gridlines(draw_labels=True, linewidth=2, color='gray', alpha=0.5, linestyle='--')
-
+            plt.colorbar(contf)
             #SET THIS TO CORRECT VALUE 
             dt   = 0.25
             time = float(dt*index)
