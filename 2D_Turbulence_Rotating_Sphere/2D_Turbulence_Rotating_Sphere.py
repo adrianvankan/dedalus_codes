@@ -35,12 +35,20 @@ Omega     = 100           #Planetary rotation rate
 nu        = 1.0e-3        #Viscosity
 eps       = 1             #Energy injection rate
 
+#####################
+fact = 0.0
+ang_mom_conserving_viscous_term = True
+if ang_mom_conserving_viscous_term == True:
+  fact = 1.0
+######################
+forcing_in_spectral_space = True
+######################
+
 # Specify momentum forcing range in meridional wavenumber l, with all |m| <= l being forced
 ml_vec = []
-ls = [5,6] #these l (meridional) modes are forced
-mmin = 0   #Do not need to explicitly include negative-m modes since we take real part in defining forcing
+ls = [20] #these l (meridional) modes are forced
 for l in ls:
-   for m in range(mmin,l+1): #these m (zonal) modes are forced
+   for m in range(0,l+1): #these m (zonal) modes are forced
       ml_vec.append([m,l])
 
 #Timestepper settings
@@ -62,7 +70,7 @@ psi_f  = dist.Field(      name='psi_f',   bases=basis)
 psi    = dist.Field(      name='psi',   bases=basis)
 tau_p  = dist.Field(  name='tau_p')
 g      = dist.Field(      name='g',   bases=basis)
-h      = dist.Field(      name='h',   bases=basis)
+#h      = dist.Field(      name='h',   bases=basis)
 
 # Define unit vectors
 eph   = dist.VectorField(coords, name='ephi', bases = basis)
@@ -84,14 +92,14 @@ zcross = lambda A: d3.MulCosine(d3.skew(A))
 # Problem (nondimensional)
 problem = d3.IVP([u, p, tau_p], namespace=locals())
 problem.add_equation("div(u) + tau_p = 0")
-problem.add_equation("dt(u) +  grad(p) - nu*lap(u) - 2*nu*u  = - 2*Omega*zcross(u)  - u@grad(u) + d3.skew(d3.grad(psi_f))")
+problem.add_equation("dt(u) +  grad(p) - nu*lap(u) - 2*fact*nu*u  = - 2*Omega*zcross(u)  - u@grad(u) + d3.skew(d3.grad(psi_f))")
 problem.add_equation("ave(p) = 0")
 
 # Solver
 solver = problem.build_solver(timestepper)
 solver.stop_sim_time = stop_sim_time
 
-#Initial condition (spherical harmonic |l| <= m)
+#Initial condition
 if restart == False:
   l = 5
   m = 5 
@@ -105,17 +113,18 @@ if restart == False:
   problem2.add_equation("u = d3.skew(d3.grad(psi)) ")
   solver2 = problem2.build_solver()
   solver2.solve()
-
 else:
   write, initial_timestep = solver.load_state(cp_path)
   file_handler_mode = 'append'
  
 # Analysis
-snapshots = solver.evaluator.add_file_handler('snapshots', sim_dt=0.5, max_writes=1000,mode=file_handler_mode)
-snapshots.add_task(p, name='pressure')
-snapshots.add_task(-d3.div(d3.skew(u)), name='vorticity')
-snapshots.add_task(eph@u, name='u_phi')
-snapshots.add_task(eth@u, name='u_theta')
+snapshots = solver.evaluator.add_file_handler('snapshots', sim_dt=0.25, max_writes=1000,mode=file_handler_mode)
+snapshots.add_task(-d3.div(d3.skew(u)), name='vorticity',layout='g')
+snapshots.add_task(eph@u, name='u_phi', layout='g')
+snapshots.add_task(eth@u, name='u_theta',layout = 'g')
+snapshots.add_task(eph@u, name='u_phi_c', layout='c')
+snapshots.add_task(eth@u, name='u_theta_c', layout='c')
+snapshots.add_task(-d3.div(d3.skew(u)), name='vorticity_c', layout='c')
 checkpoints = solver.evaluator.add_file_handler('checkpoints', sim_dt=10, max_writes=1, mode=file_handler_mode)
 checkpoints.add_tasks(solver.state)
 
@@ -150,41 +159,69 @@ comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
 
+it0 = solver.iteration
 #############
 # MAIN LOOP #
 #############
 try:
     logger.info('Starting main loop')
     while solver.proceed:
-        
-        phi,theta = basis.local_grids(dist=dist,scales=(dealias,dealias));
-        phi_mat   = phi   + 0*theta
-        theta_mat = theta + 0*phi
-        
         psi_f['g'] = 0
-        if not ( len(psi_f['g']) == len(phi_mat) and len(psi_f['g']) == len(theta_mat)) : 
-          print(len(psi_f['g']),len(phi_mat),len(theta_mat))
+        if solver.iteration == it0:#not ( len(psi_f['g']) == len(phi_mat) and len(psi_f['g']) == len(theta_mat)) : 
+          phi,theta = basis.local_grids(dist=dist,scales=(dealias,dealias));
+          phi_mat   = phi   + 0*theta
+          theta_mat = theta + 0*phi  
+          #print(len(psi_f['g']),len(phi_mat),len(theta_mat),np.shape(psi_f['c']))
           d3.Average(psi_f).evaluate() #this gives the arrays the correct dimensions
           d3.Average(g).evaluate()
+          ml_vec_inds = []#np.zeros_like(ml_vec)
+          for ml in ml_vec: ml_vec_inds.append([])
+          for ind_ml,ml in enumerate(ml_vec):
+            mf,lf = ml
+            phase = 2*np.pi*np.random.rand(1)
+            slices = dict()
+            #plt.pcolormesh(g['c']);plt.colorbar(); plt.show()
+            delta_ind = int(Ntheta/size)
+            for i in range(rank*delta_ind,(rank+1)*delta_ind):#g['c'].shape[0]/Ntheta):
+              for j in range(g['c'].shape[1]):
+                groups = basis.elements_to_groups((False, False), (np.array((i,)),np.array((j,))))
+                em = int(groups[0][0])
+                ell = int(groups[1][0])
+                if (em == mf) and (ell == lf):
+                  #print(ind_ml)
+                  ml_vec_inds[ind_ml].append([i,j])
 
-        for ml in ml_vec:
-          m,l = ml 
-          phase = 2*np.pi*np.random.rand(1)        
-         #For order of arguments of sph_harm, see https://docs.scipy.org/doc/scipy/reference/generated/scipy.special.sph_harm.html
-          psi_f['g'] += np.real(np.exp(1.0j*phase)*scipy.special.sph_harm(m,l,phi_mat,theta_mat))
-      
-        #compute momentum forcing from skew gradient of psi_f
-        f     = d3.skew(d3.grad(psi_f)).evaluate()
-        f_var = reducer.global_mean(g['g']*(f['g'][0]**2 + f['g'][1]**2))/reducer.global_mean(g['g'])
+        if solver.iteration > it0:
+          #####################################
+          if forcing_in_spectral_space == True:
+            for inds_ml in range(len(ml_vec_inds)):
+                inds_ml_tuple = ml_vec_inds[inds_ml]
+                for ind_ml in enumerate(inds_ml_tuple):
+                  phase = 2*np.pi*np.random.rand(1)
+                  i,j = ind_ml; #print(ind_ml)
+                  psi_f['c'][i,j] = np.cos(phase)
+          ##########################################        
+          if forcing_in_spectral_space == False:
+            for ml in ml_vec:
+              m,l = ml
+              phase = 2*np.pi*np.random.rand(1)
+              psi_f['g'] += np.real(np.exp(1.0j*phase)*scipy.special.sph_harm(m,l,phi_mat,theta_mat))
+          ##########################################
+ #For order of arguments of sph_harm, see https://docs.scipy.org/doc/scipy/reference/generated/scipy.special.sph_harm.html
+       
+          #compute momentum forcing from skew gradient of psi_f
+          f     = d3.skew(d3.grad(psi_f)).evaluate()
+          f_var = reducer.global_mean(g['g']*(f['g'][0]**2 + f['g'][1]**2))/reducer.global_mean(g['g'])
         
-        timestep = CFL.compute_timestep()
-        psi_f['g'] = psi_f['g']/f_var**(0.5) * (2 * eps / timestep)**0.5 
-        
+          timestep = CFL.compute_timestep()
+          psi_f['g'] = psi_f['g']/f_var**(0.5) * (2 * eps / timestep)**0.5 
+          
         solver.step(timestep)
+        #print('done with a timestep')
         if (solver.iteration) % flow_prop_cad == 0:
             avgEkin  = flow.max('avgEkin')
-            diss_E     = flow.max('diss_E')
-            m     = flow.max('polarity')
+            diss_E   = flow.max('diss_E')
+            m        = flow.max('polarity')
             logger.info('Iteration=%i, Time=%e, dt=%e, Ekin=%f, Ekin/time=%f, Diss_E =%f, m=%f' %(solver.iteration, solver.sim_time, timestep, avgEkin, avgEkin/solver.sim_time, diss_E, m))
  
 except:
@@ -192,3 +229,4 @@ except:
     raise
 finally:
     solver.log_stats()
+

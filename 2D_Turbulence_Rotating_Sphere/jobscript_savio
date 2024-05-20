@@ -1,0 +1,31 @@
+#!/bin/bash
+#SBATCH -p savio3
+#SBATCH --account=fc_phact2d3D
+#SBATCH --ntasks=16
+#SBATCH --nodes=1
+#SBATCH --time=24:00:00
+#SBATCH --job-name=dedalus
+#SBATCH --output=dedalus_output_%j
+export SLURM_EXPORT_ENV=ALL
+###export I_MPI_FABRICS=shm,tcp
+###module load anaconda
+module purge 
+#ml python openmpi intel #intel openmpi
+##conda init bash
+##eval $(conda shell.bash hook)
+##conda deactivate
+#eval "$(conda shell.bash activate dedalus3)"
+conda activate dedalus3
+
+SUBMITDIR=$SLURM_SUBMIT_DIR
+
+WORKDIR=/global/scratch/users/avankan/DEDALUS/ROTATING_SPHERE/dedalus_$SLURM_JOB_ID
+
+mkdir -p "$WORKDIR" && cp -r 2D_Turbulence_Rotating_Sphere.py "$WORKDIR" && cp -r plot_sphere_Mollweide.py "$WORKDIR" && cp -r plot_timeseries.py "$WORKDIR"  &&  cd "$WORKDIR" || exit -1 
+
+mpiexec -n $SLURM_NTASKS python3 2D_Turbulence_Rotating_Sphere.py
+
+mpiexec -n $SLURM_NTASKS python3 plot_sphere_Mollweide.py snapshots/*.h5
+
+cd "$SUBMITDIR" && cp dedalus_output_$SLURM_JOB_ID "$WORKDIR"
+####################
