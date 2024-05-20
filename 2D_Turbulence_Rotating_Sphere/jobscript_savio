@@ -7,14 +7,7 @@
 #SBATCH --job-name=dedalus
 #SBATCH --output=dedalus_output_%j
 export SLURM_EXPORT_ENV=ALL
-###export I_MPI_FABRICS=shm,tcp
-###module load anaconda
 module purge 
-#ml python openmpi intel #intel openmpi
-##conda init bash
-##eval $(conda shell.bash hook)
-##conda deactivate
-#eval "$(conda shell.bash activate dedalus3)"
 conda activate dedalus3
 
 SUBMITDIR=$SLURM_SUBMIT_DIR
