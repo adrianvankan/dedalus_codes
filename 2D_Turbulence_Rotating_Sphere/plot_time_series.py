@@ -2,12 +2,8 @@
 
 import numpy as np
 from matplotlib import pyplot as plt
-from scipy.stats import levy_stable
-#from mpmath import *
 import matplotlib as mpl
 from matplotlib import rc
-from datetime import datetime
-#import numba as nb
 import h5py
 
 rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
@@ -56,9 +52,9 @@ for ind in inds:
   t0 = time[-1]
 if False:
   plt.figure(1)  
-  plt.savefig('Tke_vs_time.pdf')
+  plt.savefig('Tke_vs_time.png')
   plt.figure(2)
-  plt.savefig('Om_vs_time.pdf')
+  plt.savefig('Om_vs_time.png')
   plt.figure(3)
-  plt.savefig('polarity_vs_time.pdf')
+  plt.savefig('polarity_vs_time.png')
 plt.show()
