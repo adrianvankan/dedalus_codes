@@ -21,18 +21,18 @@ Nphi      = 256        # Number of m modes (zonal)
 Ntheta    = 128         # Number of l modes (meridional)
 dealias   = 3/2
 R         = 1.0        #Sphere radius (non-dim)
-timestep  = 1e-3       #initial timestep
-stop_sim_time = 100     #stop time
+timestep  = 5e-4       #initial timestep
+stop_sim_time = 1000   #stop time
 dtype     = np.float64
-seed0     = 124
-max_timestep = 1e-3
+seed0     = 12
+max_timestep = 5e-4
 
 restart    = False
 cp_path    = 'checkpoints/checkpoints_s6.h5'
 
 ##### Dimensional Parameters ####
 Omega     = 100           #Planetary rotation rate
-nu        = 1.0e-3        #Viscosity
+nu        = 1e-3          #Viscosity
 eps       = 1             #Energy injection rate
 
 #####################
@@ -41,12 +41,12 @@ ang_mom_conserving_viscous_term = True
 if ang_mom_conserving_viscous_term == True:
   fact = 1.0
 ######################
-forcing_in_spectral_space = True
+forcing_in_spectral_space = False
 ######################
 
 # Specify momentum forcing range in meridional wavenumber l, with all |m| <= l being forced
 ml_vec = []
-ls = [20] #these l (meridional) modes are forced
+ls = [4,5] #these l (meridional) modes are forced
 for l in ls:
    for m in range(0,l+1): #these m (zonal) modes are forced
       ml_vec.append([m,l])
@@ -135,7 +135,7 @@ analysis1.add_task(d3.Average((-d3.div(d3.skew(u)))**2, coords), name='Enstrophy
 analysis1.add_task( (d3.Average((eph@u)**2,coords)- d3.Average((eth@u)**2,coords))/(d3.Average(u@u,coords)+0.00000001), name='polarity')
 
 # Flow properties
-flow_prop_cad = 10
+flow_prop_cad = 25
 flow = d3.GlobalFlowProperty(solver, cadence = flow_prop_cad)
 flow.add_property(d3.Average(0.5*(u@u),coords), name = 'avgEkin')
 flow.add_property(d3.Average(-nu*u@d3.lap(u),coords), name='diss_E')
@@ -148,7 +148,7 @@ phi_arr   = phi + 0*theta
 reducer   = flow_tools.GlobalArrayReducer(comm=MPI.COMM_WORLD)
 
 # CFL
-CFL = d3.CFL(solver, initial_dt=initial_timestep, cadence=10, safety=0.8, threshold=0.8, max_change=100000, min_change=0.00001, max_dt=max_timestep)
+CFL = d3.CFL(solver, initial_dt=initial_timestep, cadence=25, safety=0.8, threshold=0.8, max_change=100000, min_change=0.00001, max_dt=max_timestep)
 CFL.add_velocity(u)
 
 # Initialise random seed to seed0
