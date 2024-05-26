@@ -1,6 +1,6 @@
 # This Dedalus script solves the stochastically forced 2D Navier-Stokes equations on the sphere
 # Author: Adrian van Kan
-# Date  : 15 May 2024
+# Date  : 25 May 2024
 
 import numpy as np
 import dedalus.public as d3
@@ -33,7 +33,7 @@ cp_path    = 'checkpoints/checkpoints_s6.h5'
 
 ##### Dimensional Parameters ####
 Omega     = 0             #Planetary rotation rate
-nu        = 1e-3          #Viscosity
+nu        = 3e-3          #Viscosity
 eps       = 1             #Energy injection rate
 
 #####################
