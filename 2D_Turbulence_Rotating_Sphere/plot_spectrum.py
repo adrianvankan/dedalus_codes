@@ -70,7 +70,7 @@ E_spec_avg /= cnt
 ells = np.arange(Ntheta)+1
 
 plt.figure(layout='constrained')
-plt.loglog(ells,E_spec_avg); plt.xlabel('$E(\\ell)$'); plt.ylabel('$\\ell$')
+plt.loglog(ells,E_spec_avg); plt.ylabel('$E(\\ell)$'); plt.xlabel('$\\ell$')
 
-plt.figure(layout='constrained')
-plt.loglog(ells,E_spec_avg*ells**4); plt.show()
+plt.figure(layout='constrained'); plt.ylabel('$\\ell^2(\\ell+1)^2E(\\ell)$'); plt.xlabel('$\\ell$')
+plt.loglog(ells,E_spec_avg*ells**2*(ells+1)**2); plt.show()
