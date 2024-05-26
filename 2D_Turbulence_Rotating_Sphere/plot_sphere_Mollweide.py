@@ -31,14 +31,11 @@ def main(filename, start, count, output):
         times = file['scales']['sim_time']
         phi = dset.dims[1][0][:].ravel() 
         theta = dset.dims[2][0][:].ravel()
-        #print(phi)
         lat = (np.pi/2 - theta)*180/np.pi
         phi = (phi - np.pi)*180/np.pi
         phi[0]  = -180
         phi[-1] = 180
-        #print(phi)
         phi_mat,lat_mat = np.meshgrid(phi,lat)
-        #plt.clf()
         fig = plt.figure(1,figsize=figsize)
         ax = fig.add_subplot(projection=ccrs.Mollweide())
         for index in range(start, start+count):
