@@ -10,6 +10,7 @@ import dedalus.extras.flow_tools as flow_tools
 from mpi4py import MPI
 import dedalus.tools.logging as mpi_logging
 import matplotlib.pyplot as plt
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -18,20 +19,20 @@ figkw = {'figsize':(6,4), 'dpi':100}
 
 ###### Numerical Parameters ####
 Nphi      = 256        # Number of m modes (zonal)
-Ntheta    = 128         # Number of l modes (meridional)
+Ntheta    = 128        # Number of l modes (meridional)
 dealias   = 3/2
 R         = 1.0        #Sphere radius (non-dim)
 timestep  = 5e-4       #initial timestep
 stop_sim_time = 1000   #stop time
 dtype     = np.float64
-seed0     = 12
+seed0     = 1
 max_timestep = 5e-4
 
 restart    = False
 cp_path    = 'checkpoints/checkpoints_s6.h5'
 
 ##### Dimensional Parameters ####
-Omega     = 100           #Planetary rotation rate
+Omega     = 0             #Planetary rotation rate
 nu        = 1e-3          #Viscosity
 eps       = 1             #Energy injection rate
 
@@ -41,12 +42,12 @@ ang_mom_conserving_viscous_term = True
 if ang_mom_conserving_viscous_term == True:
   fact = 1.0
 ######################
-forcing_in_spectral_space = False
+forcing_in_spectral_space = True
 ######################
 
 # Specify momentum forcing range in meridional wavenumber l, with all |m| <= l being forced
 ml_vec = []
-ls = [4,5] #these l (meridional) modes are forced
+ls = [10] #these l (meridional) modes are forced
 for l in ls:
    for m in range(0,l+1): #these m (zonal) modes are forced
       ml_vec.append([m,l])
@@ -151,18 +152,23 @@ reducer   = flow_tools.GlobalArrayReducer(comm=MPI.COMM_WORLD)
 CFL = d3.CFL(solver, initial_dt=initial_timestep, cadence=25, safety=0.8, threshold=0.8, max_change=100000, min_change=0.00001, max_dt=max_timestep)
 CFL.add_velocity(u)
 
-# Initialise random seed to seed0
-np.random.seed(seed0)
-
 #set MPI rank and size
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
 
+# Initialise random seed to seed0
+if forcing_in_spectral_space == True:
+   np.random.seed(seed0+rank)
+elif forcing_in_spectral_space == False:
+   np.random.seed(seed0)
+
 it0 = solver.iteration
 #############
 # MAIN LOOP #
 #############
+g.preset_scales(dealias)
+psi_f.preset_scales(dealias)
 try:
     logger.info('Starting main loop')
     while solver.proceed:
@@ -171,48 +177,37 @@ try:
           phi,theta = basis.local_grids(dist=dist,scales=(dealias,dealias));
           phi_mat   = phi   + 0*theta
           theta_mat = theta + 0*phi  
-          #print(len(psi_f['g']),len(phi_mat),len(theta_mat),np.shape(psi_f['c']))
-          d3.Average(psi_f).evaluate() #this gives the arrays the correct dimensions
-          d3.Average(g).evaluate()
-          ml_vec_inds = []#np.zeros_like(ml_vec)
-          for ml in ml_vec: ml_vec_inds.append([])
-          for ind_ml,ml in enumerate(ml_vec):
-            mf,lf = ml
+          
+          for lf in ls:
             phase = 2*np.pi*np.random.rand(1)
-            slices = dict()
-            #plt.pcolormesh(g['c']);plt.colorbar(); plt.show()
-            delta_ind = int(Ntheta/size)
-            for i in range(rank*delta_ind,(rank+1)*delta_ind):#g['c'].shape[0]/Ntheta):
-              for j in range(g['c'].shape[1]):
-                groups = basis.elements_to_groups((False, False), (np.array((i,)),np.array((j,))))
-                em = int(groups[0][0])
-                ell = int(groups[1][0])
-                if (em == mf) and (ell == lf):
-                  #print(ind_ml)
-                  ml_vec_inds[ind_ml].append([i,j])
-
+            m, ell, *_ = dist.coeff_layout.local_group_arrays(basis.domain(dist), scales=1)
+            print('array size',np.shape(psi_f['c'][(m>=0)*(ell == lf)]))
+            shape_psi_f =np.shape(psi_f['c'][ell == lf])
+            psi_f['c'][ell == lf] = 2*np.random.rand((shape_psi_f[0]))-1
+          d3.Average(psi_f).evaluate()
+          #plt.pcolormesh(psi_f['g']); plt.show()
+        
+        ts = time.time()
         if solver.iteration > it0:
           #####################################
           if forcing_in_spectral_space == True:
-            for inds_ml in range(len(ml_vec_inds)):
-                inds_ml_tuple = ml_vec_inds[inds_ml]
-                for ind_ml in enumerate(inds_ml_tuple):
-                  phase = 2*np.pi*np.random.rand(1)
-                  i,j = ind_ml; #print(ind_ml)
-                  psi_f['c'][i,j] = np.cos(phase)
+            for lf in ls: 
+              shape_psi_f =np.shape(psi_f['c'][ell == lf])
+              psi_f['c'][ell == lf] = 2*np.random.rand((shape_psi_f[0]))-1
           ##########################################        
           if forcing_in_spectral_space == False:
             for ml in ml_vec:
               m,l = ml
               phase = 2*np.pi*np.random.rand(1)
               psi_f['g'] += np.real(np.exp(1.0j*phase)*scipy.special.sph_harm(m,l,phi_mat,theta_mat))
-          ##########################################
- #For order of arguments of sph_harm, see https://docs.scipy.org/doc/scipy/reference/generated/scipy.special.sph_harm.html
-       
+          ##########################################  #For order of arguments of sph_harm, see https://docs.scipy.org/doc/scipy/reference/generated/scipy.special.sph_harm.html
+          #print(time.time()-ts)
+          #d3.Average(psi_f).evaluate()
+          #plt.clf();plt.title(str(rank)); plt.pcolormesh(np.transpose(psi_f['g']),cmap='seismic'); plt.colorbar(); plt.show()
           #compute momentum forcing from skew gradient of psi_f
           f     = d3.skew(d3.grad(psi_f)).evaluate()
           f_var = reducer.global_mean(g['g']*(f['g'][0]**2 + f['g'][1]**2))/reducer.global_mean(g['g'])
-        
+          #print(f_var)
           timestep = CFL.compute_timestep()
           psi_f['g'] = psi_f['g']/f_var**(0.5) * (2 * eps / timestep)**0.5 
           
