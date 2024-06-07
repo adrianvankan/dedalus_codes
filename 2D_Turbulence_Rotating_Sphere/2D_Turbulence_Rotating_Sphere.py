@@ -1,6 +1,6 @@
 # This Dedalus script solves the stochastically forced 2D Navier-Stokes equations on the sphere
 # Author: Adrian van Kan
-# Date  : 25 May 2024
+# Date  : 06 June 2024
 
 import numpy as np
 import dedalus.public as d3
@@ -19,7 +19,7 @@ figkw = {'figsize':(6,4), 'dpi':100}
 
 ###### Numerical Parameters ####
 Nphi      = 256        # Number of m modes (zonal)
-Ntheta    = 128        # Number of l modes (meridional)
+Ntheta    = 128         # Number of l modes (meridional)
 dealias   = 3/2
 R         = 1.0        #Sphere radius (non-dim)
 timestep  = 5e-4       #initial timestep
@@ -28,11 +28,11 @@ dtype     = np.float64
 seed0     = 1
 max_timestep = 5e-4
 
-restart    = False
-cp_path    = 'checkpoints/checkpoints_s6.h5'
+restart    = True
+cp_path    = 'checkpoints/checkpoints_s3.h5'
 
 ##### Dimensional Parameters ####
-Omega     = 0             #Planetary rotation rate
+Omega     = 100           #Planetary rotation rate
 nu        = 3e-3          #Viscosity
 eps       = 1             #Energy injection rate
 
@@ -119,15 +119,19 @@ else:
   file_handler_mode = 'append'
  
 # Analysis
-snapshots = solver.evaluator.add_file_handler('snapshots', sim_dt=0.25, max_writes=1000,mode=file_handler_mode)
+snapshots = solver.evaluator.add_file_handler('snapshots', sim_dt=0.1, max_writes=10000,mode=file_handler_mode)
 snapshots.add_task(-d3.div(d3.skew(u)), name='vorticity',layout='g')
 snapshots.add_task(eph@u, name='u_phi', layout='g')
 snapshots.add_task(eth@u, name='u_theta',layout = 'g')
 snapshots.add_task(eph@u, name='u_phi_c', layout='c')
 snapshots.add_task(eth@u, name='u_theta_c', layout='c')
 snapshots.add_task(-d3.div(d3.skew(u)), name='vorticity_c', layout='c')
-checkpoints = solver.evaluator.add_file_handler('checkpoints', sim_dt=10, max_writes=1, mode=file_handler_mode)
+checkpoints = solver.evaluator.add_file_handler('checkpoints', sim_dt=200, max_writes=1, mode=file_handler_mode)
 checkpoints.add_tasks(solver.state)
+
+# 1D Profiles
+profiles = solver.evaluator.add_file_handler('profiles',sim_dt=0.05,max_writes = 50000,mode=file_handler_mode)
+profiles.add_task(-d3.Average(eph@u, coords[0]),name='1D_zonal_velocity')
 
 # Scalar Data
 analysis1 = solver.evaluator.add_file_handler("scalar_data", sim_dt=0.01,mode=file_handler_mode)
