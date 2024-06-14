@@ -28,7 +28,7 @@ dtype     = np.float64
 seed0     = 1
 max_timestep = 5e-4
 
-restart    = True
+restart    = False
 cp_path    = 'checkpoints/checkpoints_s3.h5'
 
 ##### Dimensional Parameters ####
@@ -185,7 +185,7 @@ try:
           for lf in ls:
             phase = 2*np.pi*np.random.rand(1)
             m, ell, *_ = dist.coeff_layout.local_group_arrays(basis.domain(dist), scales=1)
-            print('array size',np.shape(psi_f['c'][(m>=0)*(ell == lf)]))
+            #FOR DBG: print('array size',np.shape(psi_f['c'][(m>=0)*(ell == lf)]))
             shape_psi_f =np.shape(psi_f['c'][ell == lf])
             psi_f['c'][ell == lf] = 2*np.random.rand((shape_psi_f[0]))-1
           d3.Average(psi_f).evaluate()
@@ -205,7 +205,6 @@ try:
               phase = 2*np.pi*np.random.rand(1)
               psi_f['g'] += np.real(np.exp(1.0j*phase)*scipy.special.sph_harm(m,l,phi_mat,theta_mat))
           ##########################################  #For order of arguments of sph_harm, see https://docs.scipy.org/doc/scipy/reference/generated/scipy.special.sph_harm.html
-          #print(time.time()-ts)
           #d3.Average(psi_f).evaluate()
           #plt.clf();plt.title(str(rank)); plt.pcolormesh(np.transpose(psi_f['g']),cmap='seismic'); plt.colorbar(); plt.show()
           #compute momentum forcing from skew gradient of psi_f
