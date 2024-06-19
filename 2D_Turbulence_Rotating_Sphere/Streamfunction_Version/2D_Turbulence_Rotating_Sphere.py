@@ -23,7 +23,7 @@ Ntheta    = 128         # Number of l modes (meridional)
 dealias   = 3/2
 R         = 1.0        #Sphere radius (non-dim)
 timestep  = 6e-4       #initial timestep
-stop_sim_time = 1000   #stop time
+stop_sim_time = 5000   #stop time
 dtype     = np.float64
 seed0     = 1234
 max_timestep = 6e-4
@@ -123,7 +123,7 @@ else:
 
 
 # Analysis
-snapshots = solver.evaluator.add_file_handler('snapshots', sim_dt=0.1, max_writes=10000,mode=file_handler_mode)
+snapshots = solver.evaluator.add_file_handler('snapshots', sim_dt=0.2, max_writes=10000,mode=file_handler_mode)
 snapshots.add_task(d3.lap(psi), name='vorticity',layout='g')
 snapshots.add_task(eph@d3.skew(d3.grad(psi)), name='u_phi', layout='g')
 snapshots.add_task(eth@d3.skew(d3.grad(psi)), name='u_theta',layout = 'g')
