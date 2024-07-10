@@ -35,7 +35,7 @@ cp_path    = 'checkpoints/checkpoints_s3.h5'
 Omega     = 0             #Planetary rotation rate
 nu        = 3e-3          #Viscosity
 eps       = 1             #Energy injection rate
-
+alpha     = 1e-2          #Rayleigh damping
 #####################
 fact = 0.0
 ang_mom_conserving_viscous_term = True
@@ -95,8 +95,7 @@ zxgrad = lambda A: d3.skew(d3.grad(A))
 
 # Problem (nondimensional)
 problem = d3.IVP([psi, tau_psi], namespace=locals())
-problem.add_equation("dt(-lap(psi)) - nu*lap(-lap(psi)) - 2*fact*nu*(-lap(psi))  - 2*Omega*div(skew(zcross(skew(grad(psi))))) + tau_psi =  - skew(grad(psi))@grad(-lap(psi)) - lap(psi_f) ")
-#2*Omega*g*eth@zxgrad(psi)
+problem.add_equation("dt(-lap(psi)) - nu*lap(-lap(psi)) - 2*fact*nu*(-lap(psi))  - 2*Omega*div(skew(zcross(skew(grad(psi))))) + tau_psi =  - skew(grad(psi))@grad(-lap(psi)) - lap(psi_f) - alpha*(-lap(psi))")
 problem.add_equation("ave(psi) = 0")
 
 # Solver
