@@ -134,17 +134,17 @@ profiles = solver.evaluator.add_file_handler('profiles',sim_dt=0.05,max_writes =
 profiles.add_task(-d3.Average(eph@u, coords[0]),name='1D_zonal_velocity')
 
 # Scalar Data
-analysis1 = solver.evaluator.add_file_handler("scalar_data", sim_dt=0.01,mode=file_handler_mode)
+analysis1 = solver.evaluator.add_file_handler("scalar_data", sim_dt=0.01, max_writes = 1000000, mode=file_handler_mode)
 analysis1.add_task(d3.Average(0.5*(u@u),coords), name="Ek")
 analysis1.add_task(d3.Average((-d3.div(d3.skew(u)))**2, coords), name='Enstrophy')
-analysis1.add_task( (d3.Average((eph@u)**2,coords)- d3.Average((eth@u)**2,coords))/(d3.Average(u@u,coords)+0.00000001), name='polarity')
+analysis1.add_task( (d3.Average((eph@u)**2,coords)- d3.Average((eth@u)**2,coords))/(d3.Average(u@u,coords)+1e-8), name='polarity')
 
 # Flow properties
 flow_prop_cad = 25
 flow = d3.GlobalFlowProperty(solver, cadence = flow_prop_cad)
 flow.add_property(d3.Average(0.5*(u@u),coords), name = 'avgEkin')
 flow.add_property(d3.Average(-nu*u@d3.lap(u),coords), name='diss_E')
-flow.add_property(d3.Average(((eph@u)*(eph@u)-(eth@u)*(eth@u))/((u@u)+0.0000001),coords), name='polarity')
+flow.add_property(d3.Average(((eph@u)*(eph@u)-(eth@u)*(eth@u)))/(d3.Average((u@u),coords)+1e-8), name='polarity')
 
 theta_arr = theta + 0*phi
 phi_arr   = phi + 0*theta
